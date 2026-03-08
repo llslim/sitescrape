@@ -1,0 +1,16 @@
+{
+  "name": "sitescrape",
+  "version": "1.0.0",
+  "description": "A CLI tool to scrape website content and tables into JSON",
+  "main": "index.mjs",
+  "type": "module",
+  "bin": {
+    "sitescrape": "./index.mjs"
+  },
+  "keywords": ["scrape", "puppeteer", "cli", "crawler"],
+  "author": "Kevin",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^21.5.0"
+  }
+}
