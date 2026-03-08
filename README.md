@@ -8,7 +8,7 @@ To install this tool globally on your system:
 
 1. Navigate to the project directory:
    ```bash
-   cd /home/kevin/web/projects/sitescrape
+   cd /home/<user>/web/projects/sitescrape
    ```
 2. Install dependencies:
    ```bash
