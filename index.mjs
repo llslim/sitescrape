@@ -4,8 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const url = process.argv[2] || 'http://localhost:3000';
-const tableSelector = process.argv[3] || 'table';
+const args = process.argv.slice(2);
+
+const nonFlagArgs = args.filter(arg => !arg.startsWith('--'));
+const url = nonFlagArgs[0] || 'http://localhost:3000';
+const tableSelector = nonFlagArgs[1] || 'table';
 
 function CleanEmptyArrayValue(data) {
     if (!Array.isArray(data)) return [];
@@ -26,10 +29,25 @@ function cleanData(data) {
     });
 }
 
+function getAssetCategory(url) {
+    const u = new URL(url);
+    const pathname = u.pathname.toLowerCase();
+
+    if (pathname.endsWith('.pdf') || pathname.endsWith('.doc') || pathname.endsWith('.docx')) {
+        return 'documents';
+    }
+    const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tif', '.tiff'];
+    if (imageExts.some(ext => pathname.endsWith(ext))) {
+        return 'images';
+    }
+    return null;
+}
+
 async function buildSitemap(browser, startUrl) {
     const visited = new Set();
     const queue = [startUrl];
     const sitemap = [];
+    const assets = { documents: [], images: [] };
     const origin = new URL(startUrl).origin;
 
     const page = await browser.newPage();
@@ -39,10 +57,18 @@ async function buildSitemap(browser, startUrl) {
         if (visited.has(currentUrl)) continue;
 
         visited.add(currentUrl);
-        sitemap.push(currentUrl);
+
+        const assetCategory = getAssetCategory(currentUrl);
+        if (assetCategory) {
+            assets[assetCategory].push(currentUrl);
+            continue;
+        }
 
         try {
             await page.goto(currentUrl, { waitUntil: 'networkidle0' });
+
+            sitemap.push(currentUrl);
+
             const links = await page.evaluate((origin) => {
                 return Array.from(document.querySelectorAll('a'))
                     .map(a => a.href)
@@ -64,7 +90,7 @@ async function buildSitemap(browser, startUrl) {
         }
     }
     await page.close();
-    return sitemap;
+    return { sitemap, assets };
 }
 
 (async () => {
@@ -74,8 +100,14 @@ async function buildSitemap(browser, startUrl) {
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
+    // Use process.cwd() so the data is saved in the directory where the command is run
+    const outputDir = path.join(process.cwd(), 'scraped_data');
+    if (!fs.existsSync(outputDir)){
+        fs.mkdirSync(outputDir);
+    }
+
     console.log(`Building sitemap starting from ${url}...`);
-    const sitemap = await buildSitemap(browser, url);
+    const { sitemap, assets } = await buildSitemap(browser, url);
     console.log(`Found ${sitemap.length} pages.`);
 
     const sitemapData = [];
@@ -115,14 +147,8 @@ async function buildSitemap(browser, startUrl) {
         });
     }
 
-    const output = { sitemap: sitemapData };
+    const output = { sitemap: sitemapData, assets };
     
-    // Use process.cwd() so the data is saved in the directory where the command is run
-    const outputDir = path.join(process.cwd(), 'scraped_data');
-    if (!fs.existsSync(outputDir)){
-        fs.mkdirSync(outputDir);
-    }
-
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `site-data-${timestamp}.json`;
     const outputPath = path.join(outputDir, filename);
