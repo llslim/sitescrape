@@ -7,10 +7,16 @@
   "bin": {
     "sitescrape": "./index.mjs"
   },
-  "keywords": ["scrape", "puppeteer", "cli", "crawler"],
+  "keywords": [
+    "scrape",
+    "puppeteer",
+    "cli",
+    "crawler"
+  ],
   "author": "Kevin",
   "license": "ISC",
   "dependencies": {
+    "googleapis": "^171.4.0",
     "puppeteer": "^21.5.0"
   }
 }
